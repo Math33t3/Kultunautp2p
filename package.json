@@ -2,6 +2,7 @@
   "name": "kultunautp2p",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -9,6 +10,7 @@
   "author": "MCB",
   "license": "ISC",
   "dependencies": {
+    "fs": "^0.0.1-security",
     "socket.io": "^4.7.2"
   }
 }
