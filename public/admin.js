@@ -24,7 +24,7 @@ function createPeerConnection() {
 }
 
 function fetchPendingRequests() {
-  socket.emit('getPendingRequests');
+  socket.emit("getPendingRequests");
 }
 
 function addPendingRequest(clientId, clientSDP, timeStamp) {
@@ -32,14 +32,14 @@ function addPendingRequest(clientId, clientSDP, timeStamp) {
   const pendingRequestsList = document.getElementById("pending-requests");
   const listItem = document.createElement("li");
   listItem.textContent = `Client ${clientId} - Pending Request - ${timeStamp}`;
-  
+
   const acceptButton = document.createElement("button");
   acceptButton.style.backgroundColor = "greenyellow";
   acceptButton.textContent = "Accept";
   acceptButton.addEventListener("click", () => {
     handleConfirmation(clientId);
   });
-  
+
   const denyButton = document.createElement("button");
   denyButton.style.backgroundColor = "pink";
   denyButton.textContent = "Deny";
@@ -49,10 +49,9 @@ function addPendingRequest(clientId, clientSDP, timeStamp) {
 
   listItem.appendChild(acceptButton);
   listItem.appendChild(denyButton);
-  
+
   pendingRequestsList.appendChild(listItem);
 }
-
 
 function handleDeny(clientId) {
   socket.emit("denyRequest", clientId);
@@ -60,13 +59,14 @@ function handleDeny(clientId) {
   const pendingRequestsList = document.getElementById("pending-requests");
   const listItems = pendingRequestsList.getElementsByTagName("li");
   for (let i = 0; i < listItems.length; i++) {
-    if (listItems[i].textContent.includes(`Client ${clientId} - Pending Request`)) {
+    if (
+      listItems[i].textContent.includes(`Client ${clientId} - Pending Request`)
+    ) {
       listItems[i].remove();
       break;
     }
   }
 }
-
 
 async function handleConfirmation(clientId) {
   const clientSDP = pendingRequests[clientId];
@@ -78,31 +78,33 @@ async function handleConfirmation(clientId) {
 
   cleanup();
 
-  if (confirm(`Accept the screenshare request from Client ${clientId}?`)) {
-    createPeerConnection();
+  createPeerConnection();
 
-    try {
-      await peer.setRemoteDescription(clientSDP);
+  try {
+    await peer.setRemoteDescription(clientSDP);
 
-      const sdp = await peer.createAnswer();
-      await peer.setLocalDescription(sdp);
+    const sdp = await peer.createAnswer();
+    await peer.setLocalDescription(sdp);
 
-      socket.emit("answer", { clientId, sdp: peer.localDescription });
+    socket.emit("answer", { clientId, sdp: peer.localDescription });
 
-      delete pendingRequests[clientId];
-      const pendingRequestsList = document.getElementById("pending-requests");
-      const listItems = pendingRequestsList.getElementsByTagName("li");
-      for (let i = 0; i < listItems.length; i++) {
-        if (listItems[i].textContent.includes(`Client ${clientId} - Pending Request`)) {
-          listItems[i].remove();
-          break;
-        }
+    delete pendingRequests[clientId];
+    const pendingRequestsList = document.getElementById("pending-requests");
+    const listItems = pendingRequestsList.getElementsByTagName("li");
+    for (let i = 0; i < listItems.length; i++) {
+      if (
+        listItems[i].textContent.includes(
+          `Client ${clientId} - Pending Request`
+        )
+      ) {
+        listItems[i].remove();
+        break;
       }
-      const screen = document.getElementById("client-screen-container");
-      screen.classList.toggle("active-screen", true);
-    } catch (error) {
-      console.error("Error handling confirmation:", error);
     }
+    const screen = document.getElementById("client-screen-container");
+    screen.classList.toggle("active-screen", true);
+  } catch (error) {
+    console.error("Error handling confirmation:", error);
   }
 }
 
@@ -141,7 +143,7 @@ socket.on("icecandidate", async (candidate) => {
 });
 
 function terminateSession() {
-  if (confirm(`Are you sure you want to end the session?`)){
+  if (confirm(`Are you sure you want to end the session?`)) {
     cleanup();
     informClientSessionTermination();
   }
