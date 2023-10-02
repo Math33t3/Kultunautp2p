@@ -38,7 +38,7 @@ function cleanupOldRequests() {
 cleanupOldRequests();
 
 // TODO
-
+// timeout + delay på websocket på admin.js
 // on disconnect => tjek om socket havde noget onGoing
 
 io.on("connection", (socket) => {
