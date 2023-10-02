@@ -3,6 +3,7 @@ const socket = io();
 let peer = null;
 const video = document.getElementById("client-screen");
 const pendingRequests = {};
+let currentClientId = null;
 
 function createPeerConnection() {
   if (peer) {
@@ -27,11 +28,22 @@ function fetchPendingRequests() {
   socket.emit("getPendingRequests");
 }
 
-function addPendingRequest(clientId, clientSDP, timeStamp) {
+function addPendingRequest(clientId, clientSDP, timeStamp, infoObject) {
   pendingRequests[clientId] = clientSDP;
   const pendingRequestsList = document.getElementById("pending-requests");
   const listItem = document.createElement("li");
-  listItem.textContent = `Client ${clientId} - Pending Request - ${timeStamp}`;
+
+  console.log(infoObject);
+
+  const date = new Date(timeStamp);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0'); 
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const formattedTimestamp = `${day}-${month} ${hours}:${minutes}`;
+
+  listItem.textContent = `Client ${clientId} - Pending Request - ${formattedTimestamp} - \n${infoObject.hubba} -\n${infoObject.mad}`;
+
 
   const acceptButton = document.createElement("button");
   acceptButton.style.backgroundColor = "greenyellow";
@@ -77,7 +89,6 @@ async function handleConfirmation(clientId) {
   }
 
   cleanup();
-
   createPeerConnection();
 
   try {
@@ -103,6 +114,7 @@ async function handleConfirmation(clientId) {
     }
     const screen = document.getElementById("client-screen-container");
     screen.classList.toggle("active-screen", true);
+    currentClientId = clientId;
   } catch (error) {
     console.error("Error handling confirmation:", error);
   }
@@ -116,6 +128,8 @@ function cleanup() {
   video.srcObject = null;
   const screen = document.getElementById("client-screen-container");
   screen.classList.toggle("active-screen", false);
+  console.log("cleaning up: "+ currentClientId);
+  currentClientId = null;
 }
 
 socket.on("pendingRequests", (requests) => {
@@ -123,7 +137,8 @@ socket.on("pendingRequests", (requests) => {
     const clientId = request.clientId;
     const clientSDP = request.sdp;
     const timeStamp = request.timeStamp;
-    addPendingRequest(clientId, clientSDP, timeStamp);
+    const infoObject = request.infoObject;
+    addPendingRequest(clientId, clientSDP, timeStamp, infoObject);
   }
 });
 
@@ -131,7 +146,8 @@ socket.on("offer", async (offerData) => {
   const timeStamp = offerData.timeStamp;
   const clientId = offerData.clientId;
   const clientSDP = offerData.sdp;
-  addPendingRequest(clientId, clientSDP, timeStamp);
+  const infoObject = offerData.infoObject;
+  addPendingRequest(clientId, clientSDP, timeStamp, infoObject);
 });
 
 socket.on("icecandidate", async (candidate) => {
@@ -142,15 +158,31 @@ socket.on("icecandidate", async (candidate) => {
   }
 });
 
+
+
 function terminateSession() {
   if (confirm(`Are you sure you want to end the session?`)) {
-    cleanup();
-    informClientSessionTermination();
-  }
-}
+    if (currentClientId) {
+      informClientSessionTermination();
+    }
+    setTimeout(cleanup(), 2000);
+  };
+};
+
+socket.on("userDisconnected", async (clientId) => {
+  if(clientId === currentClientId) {
+    if(confirm(`The Client ended the ongoing session?`)) {
+      cleanup();
+    } else {
+      setTimeout(cleanup(), 2000);
+    }
+  }; 
+});
+
 function informClientSessionTermination() {
-  socket.emit("adminSessionTerminated");
-}
+  console.log('Admin prøver at terminate .' + currentClientId);
+  socket.emit('adminSessionTerminated', currentClientId);
+};
 
 const terminateButton = document.getElementById("terminate-button");
 terminateButton.addEventListener("click", terminateSession);

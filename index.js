@@ -1,73 +1,96 @@
-import express from 'express';
-import { Server as SocketServer } from 'socket.io';
+import express from "express";
+import { Server as SocketServer } from "socket.io";
 
 const app = express();
 
-app.use('/', express.static('public'));
+app.use("/", express.static("public"));
 
 const httpServer = app.listen(3000, () => {
   console.log(`Server started on 3000`);
 });
 
 const io = new SocketServer(httpServer);
-const pendingRequests = {}; 
+const pendingRequests = {};
 
 function cleanupOldRequests() {
   const currentTime = Date.now();
   const threshold = 5 * 60 * 1000; // 5 min :)
+  console.log("bruh");
+  console.log("current: " + currentTime);
+  for (const socketId of Object.keys(pendingRequests)) {
+    console.log(pendingRequests[socketId].clientId);
+    console.log(pendingRequests[socketId].timeStamp);
+    console.log(currentTime - pendingRequests[socketId].timeStamp);
+  }
 
-  for (let i = pendingRequests.length - 1; i >= 0; i--) {
-    if (currentTime - pendingRequests[i].timeStamp >= threshold) {
-      pendingRequests.splice(i, 1);
-    };
-  };
-  setTimeout(cleanupOldRequests, 5 * 60 * 1000);
-};
+  for (const socketId of Object.keys(pendingRequests)) {
+    if (currentTime - pendingRequests[socketId].timeStamp >= threshold)  {
+      console.log(`Cleaning up socketId: ${socketId}`);
+      io.to(socketId).emit("adminSessionTerminated");
+      delete pendingRequests[socketId];
+    }
+  }
 
+  setTimeout(cleanupOldRequests, 5 * 60 * 1000); // 5 min :)
+  // Hvert 5. min bliver all "Ikke-accepteret" requests, der er over 5 min gamle, slettet fra listen
+  // Clienten blive notificeret og stopper med at streame data
+}
 cleanupOldRequests();
 
-// TODO 
-// confirmation ved terminate session
-// skal sende event ved terminate session til client om at stoppe. 
-// skal også tjekke serveren om session stadig er i listen af pending 
-// timer ved client => undgå at streame data ud i intetheden
+// TODO
+
 // on disconnect => tjek om socket havde noget onGoing
 
+io.on("connection", (socket) => {
+  console.log("new connection from ", socket.id);
 
-io.on('connection', (socket) => {
-  console.log('new connection from ', socket.id);
+  socket.on("offer", (offer) => {
+    console.log("new offer from ", socket.id);
 
-  socket.on('offer', (offer) => {
-    console.log('new offer from ', socket.id);
-    pendingRequests[socket.id] = offer; 
-    socket.broadcast.emit('offer', offer);
+    offer.timeStamp = Date.now();
+    pendingRequests[socket.id] = offer;
+    socket.broadcast.emit("offer", offer);
   });
 
-  socket.on('answer', (answer) => {
-    console.log('new answer from ', socket.id);
-    socket.broadcast.emit('answer', answer);
+  socket.on("answer", (answer) => {
+    console.log("new answer from ", socket.id);
+    socket.broadcast.emit("answer", answer);
 
-    // Sletter fra vores pending ved connection til en admin
-    for (let i = pendingRequests.length - 1; i >= 0; i--) {
-      if (pendingRequests[i].clientId === answer.clientId) {
-        pendingRequests.splice(i, 1);
-      };
-    };
+    if (pendingRequests[answer.clientId]) {
+      delete pendingRequests[answer.clientId];
+      console.log("deleted: ", answer.clientId);
+    }
   });
 
-  socket.on('icecandidate', (candidate) => {
-    console.log('new ice candidate from ', socket.id);
-    socket.broadcast.emit('icecandidate', candidate);
+  socket.on("icecandidate", (candidate) => {
+    console.log("new ice candidate from ", socket.id);
+    socket.broadcast.emit("icecandidate", candidate);
   });
 
-
-  socket.on('getPendingRequests', () => {
-    socket.emit('pendingRequests', pendingRequests);
+  socket.on("getPendingRequests", () => {
+    const pendingRequestsArray = Object.values(pendingRequests);
+    socket.emit("pendingRequests", pendingRequestsArray);
   });
 
-  socket.on('denyRequest', (clientId) => {
+  socket.on("denyRequest", (clientId) => {
     if (pendingRequests[clientId]) {
       delete pendingRequests[clientId];
+      io.to(clientId).emit("adminSessionTerminated");
     }
+  });
+
+  socket.on("adminSessionTerminated", (clientId) => {
+    io.to(clientId).emit("adminSessionTerminated");
+    console.log(`Admin session terminated for client: ${clientId}`);
+  });
+
+  socket.on("disconnect", () => {
+    if (pendingRequests[socket.id]) {
+      delete pendingRequests[socket.id];
+      console.log("deleted: ", socket.id);
+    }
+    io.emit("userDisconnected", socket.id);
+    const pendingRequestsArray = Object.values(pendingRequests);
+    socket.emit("pendingRequests", pendingRequestsArray);
   });
 });
