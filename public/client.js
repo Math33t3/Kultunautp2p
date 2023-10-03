@@ -1,6 +1,6 @@
 'use strict';
 
-let socket = null; // Initialize the socket as null
+let socket = null; 
 
 const peer = new RTCPeerConnection();
 let stream = null;
@@ -10,7 +10,7 @@ const helpButton = document.getElementById('need-help');
 
 helpButton.addEventListener('click', async () => {
   try {
-    if (!socket) { // Create the Socket.io connection only if it doesn't exist
+    if (!socket) { 
       socket = io();
       socket.on('connect', () => {
         clientId = socket.id;

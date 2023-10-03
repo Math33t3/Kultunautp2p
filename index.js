@@ -15,8 +15,6 @@ const pendingRequests = {};
 function cleanupOldRequests() {
   const currentTime = Date.now();
   const threshold = 5 * 60 * 1000; // 5 min :)
-  console.log("bruh");
-  console.log("current: " + currentTime);
   for (const socketId of Object.keys(pendingRequests)) {
     console.log(pendingRequests[socketId].clientId);
     console.log(pendingRequests[socketId].timeStamp);
@@ -37,9 +35,6 @@ function cleanupOldRequests() {
 }
 cleanupOldRequests();
 
-// TODO
-// timeout + delay på websocket på admin.js
-// on disconnect => tjek om socket havde noget onGoing
 
 io.on("connection", (socket) => {
   console.log("new connection from ", socket.id);
@@ -90,6 +85,7 @@ io.on("connection", (socket) => {
       console.log("deleted: ", socket.id);
     }
     io.emit("userDisconnected", socket.id);
+    console.log("user has disconnected");
     const pendingRequestsArray = Object.values(pendingRequests);
     socket.emit("pendingRequests", pendingRequestsArray);
   });
