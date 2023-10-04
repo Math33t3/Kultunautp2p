@@ -12,7 +12,7 @@ const httpServer = app.listen(3000, () => {
 const io = new SocketServer(httpServer);
 const pendingRequests = {}; 
 
-function cleanupOldRequests() {
+/*function cleanupOldRequests() {
   const currentTime = Date.now();
   const threshold = 5 * 60 * 1000; // 5 min :)
 
@@ -24,7 +24,7 @@ function cleanupOldRequests() {
   setTimeout(cleanupOldRequests, 5 * 60 * 1000);
 };
 
-cleanupOldRequests();
+cleanupOldRequests();*/
 
 // TODO 
 // confirmation ved terminate session
@@ -39,6 +39,7 @@ io.on('connection', (socket) => {
 
   socket.on('offer', (offer) => {
     console.log('new offer from ', socket.id);
+    console.log(offer);
     pendingRequests[socket.id] = offer; 
     socket.broadcast.emit('offer', offer, socket.id);
   });

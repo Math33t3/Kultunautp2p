@@ -2,7 +2,6 @@
 let socket = null; 
 
 const peer = new RTCPeerConnection();
-let stream = null;
 let clientId;
 let adminSocketId;
 let adminAccepted = false;
@@ -18,14 +17,20 @@ helpButton.addEventListener('click', async () => {
         console.log(clientId);
       });
 
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        audio: false,
+        video: true
+      });
+
+      peer.addTrack(stream.getVideoTracks()[0], stream);
+
+      const sdp = await peer.createOffer();
+      await peer.setLocalDescription(sdp);
+      socket.emit('offer', peer.localDescription );
+
       socket.on('answer', async (adminResponse) => {
         adminAccepted = true;
-      
-        try {
-          await peer.setRemoteDescription(adminResponse.sdp);
-        } catch (error) {
-          console.error('Error setting remote description:', error);
-        }
+        await peer.setRemoteDescription(adminResponse);
       });
 
       socket.on('icecandidate', async (candidate) => {
@@ -42,21 +47,9 @@ helpButton.addEventListener('click', async () => {
           stream.getTracks().forEach((track) => {
             track.stop();
           });
-          stream = null;
         }
         console.log('Admin has terminated the session. Stopping screen sharing.');
       });  
-
-    stream = await navigator.mediaDevices.getDisplayMedia({
-      audio: false,
-      video: true
-    });
-
-    peer.addTrack(stream.getVideoTracks()[0], stream);
-
-    const sdp = await peer.createOffer();
-    await peer.setLocalDescription(sdp);
-    socket.emit('offer', peer.localDescription );
   } 
 }catch (error) {
     console.error(error);
@@ -66,7 +59,7 @@ helpButton.addEventListener('click', async () => {
 
 
 peer.addEventListener('icecandidate', (event) => {
-  if (event.candidate && adminAccepted) {
+  if (event.candidate) {
     socket.emit('icecandidate', event.candidate);
   }
 });

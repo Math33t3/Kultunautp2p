@@ -62,6 +62,7 @@ function handleDeny(clientId) {
 }
 
 async function handleConfirmation(clientId) {
+  console.log(pendingRequests[clientId]);
   const clientSDP = pendingRequests[clientId];
 
   if (!clientSDP) {
@@ -79,7 +80,7 @@ async function handleConfirmation(clientId) {
       const sdp = await peer.createAnswer();
       await peer.setLocalDescription(sdp);
 
-      socket.emit("answer", { clientId, sdp: peer.localDescription });
+      socket.emit("answer", peer.localDescription );
 
       delete pendingRequests[clientId];
       const pendingRequestsList = document.getElementById("pending-requests");
@@ -125,14 +126,19 @@ socket.on("offer", async (offerData, clientId) => {
   const clientSDP = offerData;
   console.log(clientId);
   addPendingRequest(clientSDP, clientId);
+
+  await peer.setRemoteDescription(offerData);
+
+  const sdp = await peer.createAnswer();
+  await peer.setLocalDescription(sdp);
+
+  if(confirm("Press to accept the screenshare!")) {
+    socket.emit('answer', peer.localDescription);
+  };
 });
 
 socket.on("icecandidate", async (candidate) => {
-  try {
     await peer.addIceCandidate(new RTCIceCandidate(candidate));
-  } catch (error) {
-    console.error("Error adding ice candidate:", error);
-  }
 });
 
 function terminateSession() {
