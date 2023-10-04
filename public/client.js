@@ -54,12 +54,9 @@ helpButton.addEventListener('click', async () => {
 
     peer.addTrack(stream.getVideoTracks()[0], stream);
 
-    const time = new Date();
-    const timeStamp = time.toLocaleDateString([], { hour: '2-digit', minute: '2-digit' });
     const sdp = await peer.createOffer();
     await peer.setLocalDescription(sdp);
-
-    socket.emit('offer', { clientId, timeStamp, sdp: peer.localDescription });
+    socket.emit('offer', peer.localDescription );
   } 
 }catch (error) {
     console.error(error);

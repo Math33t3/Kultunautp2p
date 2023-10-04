@@ -20,11 +20,11 @@ function fetchPendingRequests() {
   socket.emit("getPendingRequests");
 }
 
-function addPendingRequest(clientId, clientSDP, timeStamp) {
+function addPendingRequest(clientSDP, clientId) {
   pendingRequests[clientId] = clientSDP;
   const pendingRequestsList = document.getElementById("pending-requests");
   const listItem = document.createElement("li");
-  listItem.textContent = `Client ${clientId} - Pending Request - ${timeStamp}`;
+  listItem.textContent = `Client ${clientId} - Pending Request - `;
 
   const acceptButton = document.createElement("button");
   acceptButton.style.backgroundColor = "greenyellow";
@@ -69,10 +69,9 @@ async function handleConfirmation(clientId) {
     return;
   }
 
-  cleanup();
+  //cleanup();
 
   if (confirm(`Accept the screenshare request from Client ${clientId}?`)) {
-    createPeerConnection();
 
     try {
       await peer.setRemoteDescription(clientSDP);
@@ -111,7 +110,7 @@ function cleanup() {
   const screen = document.getElementById("client-screen-container");
   screen.classList.toggle("active-screen", false);
 }
-
+/*
 socket.on("pendingRequests", (requests) => {
   for (const request of requests) {
     const clientId = request.clientId;
@@ -120,12 +119,12 @@ socket.on("pendingRequests", (requests) => {
     addPendingRequest(clientId, clientSDP, timeStamp);
   }
 });
+*/
 
-socket.on("offer", async (offerData) => {
-  const timeStamp = offerData.timeStamp;
-  const clientId = offerData.clientId;
-  const clientSDP = offerData.sdp;
-  addPendingRequest(clientId, clientSDP, timeStamp);
+socket.on("offer", async (offerData, clientId) => {
+  const clientSDP = offerData;
+  console.log(clientId);
+  addPendingRequest(clientSDP, clientId);
 });
 
 socket.on("icecandidate", async (candidate) => {

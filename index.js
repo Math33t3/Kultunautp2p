@@ -40,7 +40,7 @@ io.on('connection', (socket) => {
   socket.on('offer', (offer) => {
     console.log('new offer from ', socket.id);
     pendingRequests[socket.id] = offer; 
-    socket.broadcast.emit('offer', offer);
+    socket.broadcast.emit('offer', offer, socket.id);
   });
 
   socket.on('answer', (answer) => {
