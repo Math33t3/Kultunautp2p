@@ -1,30 +1,23 @@
 "use strict";
 const socket = io();
-let peer = null;
+const peer = new RTCPeerConnection();
 const video = document.getElementById("client-screen");
 const pendingRequests = {};
 
-function createPeerConnection() {
-  if (peer) {
-    peer.close();
+peer.addEventListener("icecandidate", (event) => {
+  if (event.candidate) {
+    socket.emit("icecandidate", event.candidate);
   }
-  peer = new RTCPeerConnection();
+});
 
-  peer.addEventListener("icecandidate", (event) => {
-    if (event.candidate) {
-      socket.emit("icecandidate", event.candidate);
-    }
-  });
-
-  peer.addEventListener("track", (event) => {
-    if (event.streams && event.streams[0]) {
-      video.srcObject = event.streams[0];
-    }
-  });
-}
+peer.addEventListener("track", (event) => {
+  if (event.streams && event.streams[0]) {
+    video.srcObject = event.streams[0];
+  }
+});
 
 function fetchPendingRequests() {
-  socket.emit('getPendingRequests');
+  socket.emit("getPendingRequests");
 }
 
 function addPendingRequest(clientId, clientSDP, timeStamp) {
@@ -32,14 +25,14 @@ function addPendingRequest(clientId, clientSDP, timeStamp) {
   const pendingRequestsList = document.getElementById("pending-requests");
   const listItem = document.createElement("li");
   listItem.textContent = `Client ${clientId} - Pending Request - ${timeStamp}`;
-  
+
   const acceptButton = document.createElement("button");
   acceptButton.style.backgroundColor = "greenyellow";
   acceptButton.textContent = "Accept";
   acceptButton.addEventListener("click", () => {
     handleConfirmation(clientId);
   });
-  
+
   const denyButton = document.createElement("button");
   denyButton.style.backgroundColor = "pink";
   denyButton.textContent = "Deny";
@@ -49,10 +42,9 @@ function addPendingRequest(clientId, clientSDP, timeStamp) {
 
   listItem.appendChild(acceptButton);
   listItem.appendChild(denyButton);
-  
+
   pendingRequestsList.appendChild(listItem);
 }
-
 
 function handleDeny(clientId) {
   socket.emit("denyRequest", clientId);
@@ -60,13 +52,14 @@ function handleDeny(clientId) {
   const pendingRequestsList = document.getElementById("pending-requests");
   const listItems = pendingRequestsList.getElementsByTagName("li");
   for (let i = 0; i < listItems.length; i++) {
-    if (listItems[i].textContent.includes(`Client ${clientId} - Pending Request`)) {
+    if (
+      listItems[i].textContent.includes(`Client ${clientId} - Pending Request`)
+    ) {
       listItems[i].remove();
       break;
     }
   }
 }
-
 
 async function handleConfirmation(clientId) {
   const clientSDP = pendingRequests[clientId];
@@ -93,7 +86,11 @@ async function handleConfirmation(clientId) {
       const pendingRequestsList = document.getElementById("pending-requests");
       const listItems = pendingRequestsList.getElementsByTagName("li");
       for (let i = 0; i < listItems.length; i++) {
-        if (listItems[i].textContent.includes(`Client ${clientId} - Pending Request`)) {
+        if (
+          listItems[i].textContent.includes(
+            `Client ${clientId} - Pending Request`
+          )
+        ) {
           listItems[i].remove();
           break;
         }
@@ -109,7 +106,6 @@ async function handleConfirmation(clientId) {
 function cleanup() {
   if (peer) {
     peer.close();
-    peer = null;
   }
   video.srcObject = null;
   const screen = document.getElementById("client-screen-container");
@@ -141,7 +137,7 @@ socket.on("icecandidate", async (candidate) => {
 });
 
 function terminateSession() {
-  if (confirm(`Are you sure you want to end the session?`)){
+  if (confirm(`Are you sure you want to end the session?`)) {
     cleanup();
     informClientSessionTermination();
   }
