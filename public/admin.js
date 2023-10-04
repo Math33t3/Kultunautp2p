@@ -132,9 +132,8 @@ socket.on("offer", async (offerData, clientId) => {
   const sdp = await peer.createAnswer();
   await peer.setLocalDescription(sdp);
 
-  if(confirm("Press to accept the screenshare!")) {
-    socket.emit('answer', peer.localDescription);
-  };
+  socket.emit('answer', peer.localDescription);
+
 });
 
 socket.on("icecandidate", async (candidate) => {
