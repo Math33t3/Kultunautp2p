@@ -36,6 +36,29 @@ function cleanupOldRequests() {
 cleanupOldRequests();
 
 
+// TODO 
+/*
+
+ Skal implementere nyt mellemlag af events der sætter admin og client op
+ dvs. hele ping-pong af info mm skal sendes inden
+ selve ICEcandidateconnection + generation  
+ dvs =>
+ client sender event om ønske om session - 
+ server opbevarer liste af pending med socket.id på clients 
+ admin logger på - modtager listen
+ vælger en på listen, når admin vælger sendes event 
+ til client om at clienten skal lave et offer
+ det offer får et answer med det samme 
+ => stream er nu i gang
+
+ cleanup efter terminering mm, 
+ så admin er klar til at starte næste session på listen
+ evt forceReload hvis der er behov. 
+
+ Indkooperer funktionerne fra main branch - sjovt nok kun dem der er 
+ relevante i forhold til det nye setup ... duh... :)
+ */
+
 io.on("connection", (socket) => {
   console.log("new connection from ", socket.id);
 
@@ -49,18 +72,22 @@ io.on("connection", (socket) => {
 
   socket.on("answer", (answer) => {
     console.log("new answer from ", socket.id);
-    socket.broadcast.emit("answer", answer);
+    answer.adminSocketId = socket.id;
+    //socket.broadcast.emit("answer", answer);
+    io.to(answer.clientId).emit("answer", answer);
 
     if (pendingRequests[answer.clientId]) {
       delete pendingRequests[answer.clientId];
-      console.log("deleted: ", answer.clientId);
+      console.log("deleted from list: ", answer.clientId);
     }
   });
 
-  socket.on("icecandidate", (candidate) => {
-    console.log("new ice candidate from ", socket.id);
-    socket.broadcast.emit("icecandidate", candidate);
+  // this is where we need to receive the socket.id from client and admin 
+  socket.on('icecandidate', ({ candidate, targetSocketId }) => {
+    io.to(targetSocketId).emit('icecandidate', candidate);
+    console.log(`Received ICE candidate from ${socket.id} and sent it to ${targetSocketId}`);
   });
+
 
   socket.on("getPendingRequests", () => {
     const pendingRequestsArray = Object.values(pendingRequests);

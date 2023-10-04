@@ -71,7 +71,8 @@ function createPeerConnection() {
 
   peer.addEventListener("icecandidate", (event) => {
     if (event.candidate) {
-      socket.emit("icecandidate", event.candidate);
+      const targetSocketId = currentClientId;
+      socket.emit("icecandidate", event.candidate, targetSocketId);
     }
   });
 

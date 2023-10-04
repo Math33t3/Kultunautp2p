@@ -5,6 +5,7 @@ let socket = null;
 const peer = new RTCPeerConnection();
 let stream = null;
 let clientId;
+let adminSocketId;
 
 const helpButton = document.getElementById('need-help');
 
@@ -19,7 +20,8 @@ helpButton.addEventListener('click', async () => {
   
       socket.on('answer', async (adminResponse) => {
         adminAccepted = true;
-  
+        adminSocketId = adminResponse.adminSocketId;
+        console.log("DEN HER: " ,adminSocketId);
         try {
           await peer.setRemoteDescription(adminResponse.sdp);
         } catch (error) {
@@ -65,13 +67,16 @@ helpButton.addEventListener('click', async () => {
     console.error(error);
     alert(error.message);
   }
+
   
+  peer.addEventListener('icecandidate', (event) => {
+    if (event.candidate && adminAccepted) {
+      event.candidate.targetSocketId = adminSocketId
+      socket.emit('icecandidate', event.candidate, adminSocketId);
+    }
+  });
 });
 
 let adminAccepted = false;
 
-peer.addEventListener('icecandidate', (event) => {
-  if (event.candidate && adminAccepted) {
-    socket.emit('icecandidate', event.candidate);
-  }
-});
+
