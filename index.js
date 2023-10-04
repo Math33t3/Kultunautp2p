@@ -27,11 +27,27 @@ const pendingRequests = {};
 cleanupOldRequests();*/
 
 // TODO 
-// confirmation ved terminate session
-// skal sende event ved terminate session til client om at stoppe. 
-// skal også tjekke serveren om session stadig er i listen af pending 
-// timer ved client => undgå at streame data ud i intetheden
-// on disconnect => tjek om socket havde noget onGoing
+/*
+
+ Skal implementere nyt mellemlag af events der sætter admin og client op
+ dvs. hele ping-pong af info mm skal sendes inden
+ selve ICEcandidateconnection + generation  
+ dvs =>
+ client sender event om ønske om session - 
+ server opbevarer liste af pending med socket.id på clients 
+ admin logger på - modtager listen
+ vælger en på listen, når admin vælger sendes event 
+ til client om at clienten skal lave et offer
+ det offer får et answer med det samme 
+ => stream er nu i gang
+
+ cleanup efter terminering mm, 
+ så admin er klar til at starte næste session på listen
+ evt forceReload hvis der er behov. 
+
+ Indkooperer funktionerne fra main branch - sjovt nok kun dem der er 
+ relevante i forhold til det nye setup ... duh... :)
+ */
 
 
 io.on('connection', (socket) => {
